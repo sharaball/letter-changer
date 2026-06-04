@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>letter-changer site</title>
+  <title>sharaball's letter-changer</title>
   <style>
     body {
       font-family: Arial;
@@ -10,6 +10,7 @@
       color: #eee;
       padding: 20px;
     }
+
     input {
       width: 100%;
       padding: 10px;
@@ -17,63 +18,65 @@
       background: #222;
       color: #fff;
       border: 1px solid #444;
+      font-size: 16px;
     }
+
     #output {
       margin-top: 20px;
       padding: 10px;
       background: #1b1b1b;
       border: 1px solid #333;
       min-height: 40px;
+      white-space: pre-wrap;
     }
   </style>
 </head>
 <body>
 
-<h2>letter-changer</h2>
+<h2>letter changer</h2>
 
-<input id="inputText" placeholder="Введи текст..." />
+<input id="inputText" placeholder="ur text goes here" />
 <div id="output"></div>
 
 <script>
 let map = {};
 
 fetch("mapping.txt")
-  .then(r => r.text())
+  .then(res => res.text())
   .then(text => {
     text.split("\n").forEach(line => {
-      let parts = line.split("-");
-      if (parts.length >= 2) {
-        let key = parts[0].trim();
-        let values = parts[1]
-          .trim()
-          .split(" ")
-          .filter(v => v.length > 0);
+      line = line.trim();
+      if (!line || !line.includes("-")) return;
 
-        map[key] = values;
-      }
+      let [key, values] = line.split("-");
+      
+      key = key.trim();
+      values = values.trim().split(/\s+/);
+
+      map[key] = values; в
     });
   });
 
-function randomChoice(arr) {
+function random(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
 function transform(text) {
-  let result = "";
+  let out = "";
 
   for (let char of text) {
     if (map[char]) {
-      result += randomChoice(map[char]);
+      out += random(map[char]);
     } else {
-      result += char;
+      out += char;
     }
   }
 
-  return result;
+  return out;
 }
 
 document.getElementById("inputText").addEventListener("input", (e) => {
-  document.getElementById("output").innerText = transform(e.target.value);
+  document.getElementById("output").textContent = transform(e.target.value);
 });
 </script>
 
