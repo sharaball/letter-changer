@@ -1,83 +1,172 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-  <meta charset="UTF-8">
-  <title>sharaball's letter-changer</title>
-  <style>
-    body {
-      font-family: Arial;
-      background: #111;
-      color: #eee;
-      padding: 20px;
-    }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sharaball's letter changer</title>
 
-    input {
-      width: 100%;
-      padding: 10px;
-      margin: 10px 0;
-      background: #222;
-      color: #fff;
-      border: 1px solid #444;
-      font-size: 16px;
-    }
+<style>
+body {
+    font-family: Arial, sans-serif;
+    background: #111;
+    color: #eee;
+    padding: 20px;
+}
 
-    #output {
-      margin-top: 20px;
-      padding: 10px;
-      background: #1b1b1b;
-      border: 1px solid #333;
-      min-height: 40px;
-      white-space: pre-wrap;
-    }
-  </style>
+h2 {
+    margin-top: 0;
+}
+
+input[type="text"] {
+    width: 100%;
+    padding: 10px;
+    background: #222;
+    color: white;
+    border: 1px solid #444;
+    font-size: 16px;
+    box-sizing: border-box;
+}
+
+#output {
+    margin-top: 15px;
+    padding: 10px;
+    background: #1b1b1b;
+    border: 1px solid #333;
+    min-height: 40px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+label {
+    display: inline-block;
+    margin-bottom: 15px;
+    cursor: pointer;
+}
+</style>
 </head>
 <body>
 
 <h2>letter changer</h2>
 
-<input id="inputText" placeholder="ur text goes here" />
+<label>
+    <input type="checkbox" id="extraMapping">
+    Extra Mapping
+</label>
+
+<input
+    type="text"
+    id="inputText"
+    placeholder="ur text goes here"
+>
+
 <div id="output"></div>
 
 <script>
-let map = {};
+let baseMap = {};
+let extraMap = {};
+let extraLoaded = false;
 
-fetch("mapping.txt")
-  .then(res => res.text())
-  .then(text => {
-    text.split("\n").forEach(line => {
-      line = line.trim();
-      if (!line || !line.includes("-")) return;
+async function loadMapping(filename) {
+    const map = {};
 
-      let [key, values] = line.split("-");
-      
-      key = key.trim();
-      values = values.trim().split(/\s+/);
+    try {
+        const response = await fetch(filename);
 
-      map[key] = values; в
-    });
-  });
+        if (!response.ok) {
+            console.error("cant load file:", filename);
+            return map;
+        }
 
-function random(arr) {
-  return arr[Math.floor(Math.random() * arr.length)];
-}
+        const text = await response.text();
 
-function transform(text) {
-  let out = "";
+        text.split("\n").forEach(line => {
+            line = line.trim();
 
-  for (let char of text) {
-    if (map[char]) {
-      out += random(map[char]);
-    } else {
-      out += char;
+            if (!line || !line.includes("-"))
+                return;
+
+            const parts = line.split("-");
+
+            if (parts.length < 2)
+                return;
+
+            const key = parts[0].trim();
+
+            const values = parts
+                .slice(1)
+                .join("-")
+                .trim()
+                .split(/\s+/)
+                .filter(x => x.length);
+
+            map[key] = values;
+        });
+
+    } catch (err) {
+        console.error(err);
     }
-  }
 
-  return out;
+    return map;
 }
 
-document.getElementById("inputText").addEventListener("input", (e) => {
-  document.getElementById("output").textContent = transform(e.target.value);
-});
+async function init() {
+    baseMap = await loadMapping("mapping.txt");
+}
+
+function randomChoice(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+}
+
+async function ensureExtraLoaded() {
+    if (!extraLoaded) {
+        extraMap = await loadMapping("extra-mapping.txt");
+        extraLoaded = true;
+    }
+}
+
+async function transform(text) {
+    const useExtra =
+        document.getElementById("extraMapping").checked;
+
+    if (useExtra) {
+        await ensureExtraLoaded();
+    }
+
+    let result = "";
+
+    for (const char of text) {
+
+        if (useExtra && extraMap[char]) {
+            result += randomChoice(extraMap[char]);
+        }
+        else if (baseMap[char]) {
+            result += randomChoice(baseMap[char]);
+        }
+        else {
+            result += char;
+        }
+    }
+
+    return result;
+}
+
+async function updateOutput() {
+    const text =
+        document.getElementById("inputText").value;
+
+    document.getElementById("output").textContent =
+        await transform(text);
+}
+
+document
+    .getElementById("inputText")
+    .addEventListener("input", updateOutput);
+
+document
+    .getElementById("extraMapping")
+    .addEventListener("change", updateOutput);
+
+init();
 </script>
 
 </body>
